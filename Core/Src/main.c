@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,6 +72,14 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hadc);
+  uint16_t value = HAL_ADC_GetValue(hadc); // get ADC value
+    char buffer[10]; // create a buffer to hold the value as a string
+
+    // convert the value to a string and store it in the buffer
+    sprintf(buffer, "%hu\r\n", value);
+
+    // send the value over UART using the HAL_UART_Transmit function
+    HAL_UART_Transmit(&huart2, (uint8_t*)buffer, strlen(buffer), 5);
   /* NOTE : This function should not be modified. When the callback is needed,
             function HAL_ADC_ConvCpltCallback must be implemented in the user file.
   //Flag za konverzijo
@@ -111,7 +120,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_ADCEx_Calibration_Start(&hadc1);
   HAL_ADC_Start_IT(&hadc1);
-  uart_buf_len = sprintf(uart_buf, "Hello\r\n");
+  //uart_buf_len = sprintf(uart_buf, "Hello\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -121,8 +130,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	HAL_UART_Transmit(&huart2, (uint8_t *)uart_buf, uart_buf_len, 10);
-	HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
