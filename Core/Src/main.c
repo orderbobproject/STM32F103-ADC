@@ -47,6 +47,12 @@ UART_HandleTypeDef huart2;
 
 char uart_buf[100];
 int uart_buf_len;
+int sample_counter = 0;
+
+#define MAX_SAMPLES (50)
+uint16_t adc_buff[MAX_SAMPLES];
+
+static volatile uint8_t uart_send;
 
 /* USER CODE BEGIN PV */
 
@@ -72,20 +78,39 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hadc);
+  if(uart_send == 1) return;
+
   uint16_t value = HAL_ADC_GetValue(hadc); // get ADC value
-    char buffer[10]; // create a buffer to hold the value as a string
+  adc_buff[sample_counter++] = value;
+  if(sample_counter == MAX_SAMPLES){
+	  uart_send = 1;
+	  sample_counter = 0;
+  }
 
-    // convert the value to a string and store it in the buffer
-    sprintf(buffer, "%hu\r\n", value);
-
-    // send the value over UART using the HAL_UART_Transmit function
-    HAL_UART_Transmit(&huart2, (uint8_t*)buffer, strlen(buffer), 5);
   /* NOTE : This function should not be modified. When the callback is needed,
             function HAL_ADC_ConvCpltCallback must be implemented in the user file.
   //Flag za konverzijo
    */
 }
 /* USER CODE END 0 */
+static uint32_t hal_errs;
+static void send_adc_buffer(void)
+{
+	char buffer[10]; // create a buffer to hold the value as a string
+	const int ref = 4095;
+
+	for(int i = 0; i < MAX_SAMPLES;++i){
+		// convert the value to a string and store it in the buffer
+		float val = 3.3 * adc_buff[i] / 4095.f;
+
+		sprintf(buffer, "%f\r\n", val);
+
+		// send the value over UART using the HAL_UART_Transmit function
+		if(HAL_UART_Transmit(&huart2, (uint8_t*)buffer, strlen(buffer), 5) != HAL_OK)	{
+			hal_errs++;
+		}
+	}
+}
 
 /**
   * @brief  The application entry point.
@@ -128,6 +153,11 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	if(uart_send == 1){
+		send_adc_buffer();
+		uart_send = 0;
+	}
+
 
     /* USER CODE BEGIN 3 */
   }
